@@ -1,0 +1,100 @@
+COMP4321 Phase 1 - JDBM Database Schema
+========================================
+
+We use JDBM 1.0 with HTree hash tables for all persistent storage.
+Everything is stored in a single record file (spider_db.db / spider_db.lg).
+Each table below is a named HTree inside that file.
+
+------------------------------------------------------------
+1. URL / Page ID Mapping
+------------------------------------------------------------
+
+  urlToPageId   String -> Integer
+    Maps a URL string to its internal page ID.
+
+  pageIdToUrl   Integer -> String
+    Reverse lookup: page ID to URL.
+
+  pageCounter   String("counter") -> Integer
+    Auto-increment counter for page IDs (starts at 0).
+
+------------------------------------------------------------
+2. Word Stem / Word ID Mapping
+------------------------------------------------------------
+
+  wordToWordId  String -> Integer
+    Maps a stemmed (Porter) word to its word ID.
+
+  wordIdToWord  Integer -> String
+    Reverse lookup: word ID to stem.
+
+  wordCounter   String("counter") -> Integer
+    Auto-increment counter for word IDs (starts at 0).
+
+------------------------------------------------------------
+3. Page Metadata
+------------------------------------------------------------
+
+  pageTitle    Integer -> String
+    Stores the page title (<title> tag content).
+    Only set for pages that were actually crawled.
+    We use this to distinguish crawled pages from mere link references.
+
+  pageLastMod  Integer -> String
+    HTTP Last-Modified header value (RFC 1123 format).
+    Empty string if the header was not present.
+    Used on re-crawl to skip pages that haven't changed.
+
+  pageSize     Integer -> Long
+    Size of the page in bytes (from Content-Length header).
+    Falls back to the character count of the body text if unavailable.
+
+------------------------------------------------------------
+4. Inverted Indexes
+------------------------------------------------------------
+
+  bodyInverted   Integer -> HashMap<Integer, ArrayList<Integer>>
+    Maps wordId to a posting map: {pageId -> [positions in body]}.
+    Positions are word offsets (0-indexed) used for phrase search.
+    Term frequency TF(w, d) = positions list size.
+
+  titleInverted  Integer -> HashMap<Integer, ArrayList<Integer>>
+    Same structure but for title text.
+    Kept separate so title matches can be boosted in ranking.
+
+------------------------------------------------------------
+5. Forward Indexes
+------------------------------------------------------------
+
+  bodyForward   Integer -> HashMap<Integer, Integer>
+    Maps pageId to {wordId -> tf} for body words.
+    Used to look up top keywords per page and compute max(tf) for normalization.
+
+  titleForward  Integer -> HashMap<Integer, Integer>
+    Same for title words.
+
+------------------------------------------------------------
+6. Link Structures
+------------------------------------------------------------
+
+  childLinks   Integer -> HashSet<Integer>
+    Maps a page ID to the set of page IDs it links to (outgoing links).
+    Built during crawl from <a href> extraction.
+
+  parentLinks  Integer -> HashSet<Integer>
+    Maps a page ID to the set of page IDs that link to it (incoming links).
+    Updated simultaneously with childLinks.
+
+------------------------------------------------------------
+7. Text Processing
+------------------------------------------------------------
+
+Input word -> lowercase -> stop word check -> Porter stem -> index
+
+Stop words loaded from stopwords.txt.
+Both the original word and its stem are checked against the stop word list.
+Words shorter than 1 character after stemming are discarded.
+
+Phrase search is supported by storing word positions in the inverted index.
+For a phrase "A B", we check that wordId(A) appears at position P and
+wordId(B) appears at position P+1 in the same document.
