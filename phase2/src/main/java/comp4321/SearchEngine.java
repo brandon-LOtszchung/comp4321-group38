@@ -110,8 +110,8 @@ public class SearchEngine {
      * Returns page IDs where all phrase tokens appear consecutively in body OR title index.
      */
     private Set<Integer> phraseMatchPages(String[] stemmedPhrase) throws Exception {
-        Set<Integer> matches = phraseMatchInIndex(stemmedPhrase, false); // body
-        matches.addAll(phraseMatchInIndex(stemmedPhrase, true));          // title
+        Set<Integer> matches = new HashSet<>(phraseMatchInIndex(stemmedPhrase, false)); // body
+        matches.addAll(phraseMatchInIndex(stemmedPhrase, true));                        // title
         return matches;
     }
 
