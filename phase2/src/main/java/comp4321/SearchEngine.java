@@ -25,6 +25,9 @@ public class SearchEngine {
 
     private ParsedQuery parseQuery(String query) {
         ParsedQuery pq = new ParsedQuery();
+        // Normalise curly/smart quotes (U+201C, U+201D, U+2018, U+2019) to ASCII quotes
+        query = query.replace('“', '"').replace('”', '"')
+                     .replace('‘', '\'').replace('’', '\'');
         // Extract quoted phrases first, collect remaining text for free terms
         Matcher m = Pattern.compile("\"([^\"]*)\"").matcher(query);
         StringBuffer remainder = new StringBuffer();
